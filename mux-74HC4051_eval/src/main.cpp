@@ -15,6 +15,7 @@ public:
     uint8_t out = pinToSet << 4;
     uint8_t enableMask = 0b10000000;
     out |= (enableMask & PORTD);
+    //Write to the port in one go to avoid transistion errors
     PORTD = out;
     _currentPin = pinToSet;
   };
@@ -95,7 +96,21 @@ void RA4051_loop()
   for (size_t i = 0; i < 8; i++)
   {
     Serial.println(i);
-    // When transistioning between multiple bit changes, a different switch will be active as the library sets each bit at a time. So if we use this library we will need to use the disable and enable the mux between each switch.
+    /* 
+    When transistioning between multiple bit changes, 
+    a different switch will be active as the library 
+    sets each bit at a time. So if we use this library 
+    we will need to use the disable and enable the mux 
+    between each switch.
+    Example:
+    From 1 to 2
+    0001
+    0010
+    In will realistically go
+    0001
+    0000
+    0010
+    */
     mux.setPin(i);
     delay(1000);
   }
