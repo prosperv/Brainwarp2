@@ -12,12 +12,17 @@
 #define PRINTLN
 #endif
 
+// Support both the Uno and the Attiny85 boards as they will be some slight differences.
+
+// Arduino Uno
 #ifdef _AVR_IOM328P_H_
 auto PORT_DIRECTION = DDRD;
 auto PORT_OUTPUT = PORTD;
 const uint8_t ENABLE_MASK = 0b10000000;
 const auto SWITCH_BITS = 0b0111000;
 const auto SET_PIN_SHIFT = 4;
+
+// ATTINY85
 #elif _AVR_IOTN85_H_
 auto PORT_DIRECTION = DDRB;
 auto PORT_OUTPUT = PORTB;
@@ -86,6 +91,7 @@ enum class Side
 
 // const float RANGE = 1.0;
 ADXL345 accel;
+Fast4051 mux;
 Side lastSide = Side::None;
 
 void setupTiltSensor()
@@ -160,14 +166,40 @@ Side calculateSide(int16_t &ax, int16_t &ay, int16_t &az)
 
 void setSwitch(Side side)
 {
-  (void)side;
+  uint8_t muxValue = mux.getCurrentPin();
+
+  switch (side)
+  {
+  case Side::PurpleOne:
+    muxValue = 0;
+    break;
+  case Side::RedTwo:
+    muxValue = 0;
+    break;
+  case Side::GreenThree:
+    muxValue = 0;
+    break;
+  case Side::WhiteFour:
+    muxValue = 0;
+    break;
+  case Side::OrangeFive:
+    muxValue = 0;
+    break;
+  case Side::YellowSix:
+    muxValue = 0;
+    break;
+  default:
+    break:
+  }
+
+  PRINT("mux: ");
+  PRINTLN(muxValue);
+  mux.setPin(muxValue);
 }
 
 void setup()
 {
   // initialize serial communication
-  // (38400 chosen because it works as well at 8MHz as it does at 16MHz, but
-  // it's really up to you depending on your project)
 #ifdef DEBUG
   Serial.begin(38400);
 #endif
