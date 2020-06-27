@@ -1,7 +1,7 @@
 #include <Arduino.h>
+#include "fastmux.h"
 #include <Wire.h>
-#include "I2Cdev.h"
-#include "ADXL345.h"
+#include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
 #define DEBUG
 #ifdef DEBUG
@@ -12,93 +12,19 @@
 #define PRINTLN
 #endif
 
-// Support both the Uno and the Attiny85 boards as they will be some slight differences.
-
-// Arduino Uno
-#ifdef _AVR_IOM328P_H_
-#define PORT_DIRECTION DDRD
-#define PORT_OUTPUT PORTD
-const uint8_t ENABLE_MASK = 0b10000000;
-const auto SWITCH_BITS = 0b0111000;
-const auto SET_PIN_SHIFT = 4;
-
-// ATTINY85
-#elif _AVR_IOTN85_H_
-auto PORT_DIRECTION = DDRB;
-auto PORT_OUTPUT = PORTB;
-const uint8_t ENABLE_MASK = 0b10000000;
-const auto SWITCH_BITS = 0b00111000;
-const auto SET_PIN_SHIFT = 3;
-/*
-PB2 - SCL
-PB0 - SDA
-*/
-#endif
-
-class Fast4051
-{
-public:
-  Fast4051()
-  {
-    begin();
-  };
-
-  void begin()
-  {
-    PORT_DIRECTION = ENABLE_MASK & SWITCH_BITS;
-    PORT_OUTPUT = 0b00000000;
-  }
-
-  // Set the multiplexer pin to "pinToSet"
-  void setPin(uint8_t pinToSet)
-  {
-    uint8_t out = pinToSet << SET_PIN_SHIFT;
-    out |= (ENABLE_MASK & PORT_OUTPUT);
-    //Write to the port in one go to avoid transistion errors
-    PRINT("port: ");
-    PRINTLN(out, BIN);
-    PORT_OUTPUT = out;
-    _currentPin = pinToSet;
-  };
-  // Get what pin is currently set
-  int getCurrentPin()
-  {
-    return _currentPin;
-  };
-  uint8_t getPort()
-  {
-    return PORT_OUTPUT;
-  };
-  // Enable the 4051
-  void on()
-  {
-    bitClear(PORT_OUTPUT, 1);
-  };
-  // Disable the 4051
-  void off()
-  {
-    bitSet(PORT_OUTPUT, 1);
-  };
-
-protected:
-  int _currentPin;
-
-private:
-};
-
 enum class Side
 {
-  PurpleOne = 0,
-  RedTwo = 1,
-  GreenThree = 2,
-  WhiteFour = 3,
-  OrangeFive = 4,
-  YellowSix = 5,
-  None
+  None = 0,
+  PurpleOne,
+  RedTwo,
+  GreenThree,
+  WhiteFour,
+  OrangeFive,
+  YellowSix,
 };
 
 // const float RANGE = 1.0;
-ADXL345 accel;
+ADXL345 accel = ADXL345(); // USE FOR I2C COMMUNICATION
 Fast4051 mux;
 Side lastSide = Side::None;
 
@@ -106,30 +32,16 @@ void setupTiltSensor()
 {
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
-#ifdef UNO
-  Wire.setClock(200000);
-#endif
+  Wire.setClock(100000);
   // initialize device
-  PRINTLN("Initializing I2C devices...");
-  accel.initialize();
-  accel.setAutoSleepEnabled(false);
-
-  // verify connection
-  PRINTLN("Testing device connections...");
-  while (!accel.testConnection())
-  {
-    PRINTLN("ADXL345 connection failed. Trying again...");
-    delay(1000);
-  }
-
-  accel.setRate(ADXL345_RATE_100);
-  accel.setRange(ADXL345_RANGE_8G);
-  PRINTLN("ADXL345 connection passed.");
+  accel.powerOn();
+  accel.setRangeSetting(8);
+  accel.setRate(100);
 }
 
 int isOnSide(int a, int b, int c)
 {
-  const int ZERO_TRESHOLD = 40;
+  const int ZERO_TRESHOLD = 38;
   const int G_THRESHOLD = 50;
   if (abs(a) > G_THRESHOLD && abs(b) < ZERO_TRESHOLD && abs(c) < ZERO_TRESHOLD)
   {
@@ -147,28 +59,29 @@ Side calculateSide(int16_t &ax, int16_t &ay, int16_t &az)
 
   auto mag = sqrt(sq(ax) + sq(ay) + sq(az));
 
-  PRINT("mag: ");
-  PRINTLN(mag);
+  // PRINT("mag: ");
+  // PRINTLN(mag);
 
-  const int16_t MAGNITUDELIMIT = 80;
-  if (mag < MAGNITUDELIMIT)
+  const int16_t MAG_UPPER_LIMIT = 84;
+  const int16_t MAG_LOWER_LIMIT = 32;
+  if (mag > MAG_LOWER_LIMIT && mag < MAG_UPPER_LIMIT)
   {
     int xSide = isOnSide(ax, ay, az);
     int ySide = isOnSide(ay, ax, az);
     int zSide = isOnSide(az, ay, ax);
 
     if (xSide == 1 && ySide == 0 && zSide == 0)
-      side = Side::PurpleOne;
-    else if (xSide == -1 && ySide == 0 && zSide == 0)
-      side = Side::RedTwo;
-    else if (xSide == 0 && ySide == 1 && zSide == 0)
-      side = Side::GreenThree;
-    else if (xSide == 0 && ySide == -1 && zSide == 0)
-      side = Side::WhiteFour;
-    else if (xSide == 0 && ySide == 0 && zSide == 1)
-      side = Side::OrangeFive;
-    else if (xSide == 0 && ySide == 0 && zSide == -1)
       side = Side::YellowSix;
+    else if (xSide == -1 && ySide == 0 && zSide == 0)
+      side = Side::OrangeFive;
+    else if (xSide == 0 && ySide == 1 && zSide == 0)
+      side = Side::PurpleOne;
+    else if (xSide == 0 && ySide == -1 && zSide == 0)
+      side = Side::RedTwo;
+    else if (xSide == 0 && ySide == 0 && zSide == 1)
+      side = Side::GreenThree;
+    else if (xSide == 0 && ySide == 0 && zSide == -1)
+      side = Side::WhiteFour;
   }
   return side;
 }
@@ -177,61 +90,64 @@ void setSwitch(Side side)
 {
   uint8_t muxValue = mux.getCurrentPin();
 
+  mux.off();
   switch (side)
   {
   case Side::PurpleOne:
-    muxValue = 4;
+    muxValue = 3; //3
     break;
   case Side::RedTwo:
-    muxValue = 6;
+    muxValue = 5; //5
     break;
   case Side::GreenThree:
-    muxValue = 7;
+    muxValue = 1; //1
     break;
   case Side::WhiteFour:
-    muxValue = 5;
+    muxValue = 7; //7
     break;
   case Side::OrangeFive:
-    muxValue = 2;
+    muxValue = 6; //6
     break;
   case Side::YellowSix:
-    muxValue = 1;
+    muxValue = 4; //4
     break;
+  case Side::None:
+    muxValue = -1;
   default:
     break;
   }
-
-  PRINT("mux: ");
-  PRINTLN(muxValue);
-  mux.setPin(muxValue);
+  if (muxValue != -1)
+  {
+    PRINT("mux: ");
+    PRINTLN(muxValue);
+    mux.setPin(muxValue);
+    mux.on();
+  }
 }
 
 void setup()
 {
   // initialize serial communication
 #ifdef DEBUG
-  Serial.begin(38400);
+  Serial.begin(115200);
 #endif
 
 #ifdef _AVR_IOM328P_H_
   PRINTLN("UNO");
 #else
-  pinMode(5, OUTPUT);
-  pinMode(4, OUTPUT);
-  pinMode(3, OUTPUT);
-  pinMode(1, INPUT);
+  PRINTLN("TINYCORE");
 #endif
   mux.begin();
-  // setupTiltSensor();
+  setupTiltSensor();
   PRINTLN("Ready player one");
 }
 
 void loop()
 {
-  // int16_t ax, ay, az;
-  // accel.getAcceleration(&ax, &ay, &az);
-  // // read raw accel measurements from device
-  // // display tab-separated accel x/y/z values
+  int16_t ax, ay, az;
+  accel.readAccel(&ax, &ay, &az);
+  // read raw accel measurements from device
+  // display tab-separated accel x/y/z values
   // PRINT("accel:\t");
   // PRINT(ax);
   // PRINT("\t");
@@ -239,23 +155,16 @@ void loop()
   // PRINT("\t");
   // PRINTLN(az);
 
-  // Side side = calculateSide(ax, ay, az);
+  Side side = calculateSide(ax, ay, az);
 
-  // if (side != lastSide)
-  // {
-  //   PRINT("Side: ");
-  //   PRINTLN(static_cast<int>(side));
-  //   setSwitch(side);
-  //   lastSide = side;
-  // }
-  for (int i = 0; i < 8; i++)
+  if (side != lastSide)
   {
-    PRINT("mux: ");
-    PRINTLN(i);
-    mux.setPin(i);
-    delay(1000);
+    PRINT("Side: ");
+    PRINTLN(static_cast<int>(side));
+    setSwitch(side);
+    lastSide = side;
   }
 #ifdef DEBUG
-  delay(500);
+  delay(50);
 #endif
 }
