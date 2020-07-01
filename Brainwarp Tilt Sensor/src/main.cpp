@@ -47,8 +47,8 @@ void setupTiltSensor()
 
 int isOnSide(int a, int b, int c)
 {
-  const int ZERO_TRESHOLD = 38;
-  const int G_THRESHOLD = 50;
+  const int ZERO_TRESHOLD = 0.59;
+  const int G_THRESHOLD = 0.78;
   // When static, we know one axis will
   if (abs(a) > G_THRESHOLD && abs(b) < ZERO_TRESHOLD && abs(c) < ZERO_TRESHOLD)
   {
@@ -60,7 +60,7 @@ int isOnSide(int a, int b, int c)
   }
 };
 
-Side calculateSide(int16_t &ax, int16_t &ay, int16_t &az)
+Side calculateSide(double &ax, double &ay, double &az)
 {
   Side side;
 
@@ -69,8 +69,8 @@ Side calculateSide(int16_t &ax, int16_t &ay, int16_t &az)
   // PRINT("mag: ");
   // PRINTLN(mag);
 
-  const int16_t MAG_UPPER_LIMIT = 84;
-  const int16_t MAG_LOWER_LIMIT = 32;
+  const double MAG_UPPER_LIMIT = 1.3;
+  const double MAG_LOWER_LIMIT = 0.5;
   if (mag > MAG_LOWER_LIMIT && mag < MAG_UPPER_LIMIT)
   {
     int xSide = isOnSide(ax, ay, az);
@@ -151,8 +151,8 @@ void setup()
 
 void loop()
 {
-  int16_t ax, ay, az;
-  accel.readAccel(&ax, &ay, &az);
+  double accelXYZ[3];
+  accel.get_Gxyz(accelXYZ);
   // read raw accel measurements from device
   // display tab-separated accel x/y/z values
   // PRINT("accel:\t");
@@ -162,7 +162,7 @@ void loop()
   // PRINT("\t");
   // PRINTLN(az);
 
-  Side side = calculateSide(ax, ay, az);
+  Side side = calculateSide(accelXYZ[0], accelXYZ[1], accelXYZ[2]);
 
   if (side != lastSide)
   {
