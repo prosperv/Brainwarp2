@@ -45,14 +45,16 @@ void setupTiltSensor()
   accel.setRate(100);
 }
 
-int isOnSide(int a, int b, int c)
+int isOnSide(int sideToCheck, int axis1, int axis2)
 {
   const int ZERO_TRESHOLD = 0.59;
   const int G_THRESHOLD = 0.78;
-  // When static, we know one axis will
-  if (abs(a) > G_THRESHOLD && abs(b) < ZERO_TRESHOLD && abs(c) < ZERO_TRESHOLD)
+
+  // We know we're on a side if one axis has a high values while the other 2 axsi are near zero.
+  // Ex. x: 0.01, y: -0.01, z: 1.1
+  if (abs(sideToCheck) > G_THRESHOLD && abs(axis1) < ZERO_TRESHOLD && abs(axis2) < ZERO_TRESHOLD)
   {
-    return a > 0 ? (1) : -1;
+    return sideToCheck > 0 ? (1) : -1;
   }
   else
   {
@@ -65,9 +67,6 @@ Side calculateSide(double &ax, double &ay, double &az)
   Side side;
 
   auto mag = sqrt(sq(ax) + sq(ay) + sq(az));
-
-  // PRINT("mag: ");
-  // PRINTLN(mag);
 
   const double MAG_UPPER_LIMIT = 1.3;
   const double MAG_LOWER_LIMIT = 0.5;
@@ -153,14 +152,6 @@ void loop()
 {
   double accelXYZ[3];
   accel.get_Gxyz(accelXYZ);
-  // read raw accel measurements from device
-  // display tab-separated accel x/y/z values
-  // PRINT("accel:\t");
-  // PRINT(ax);
-  // PRINT("\t");
-  // PRINT(ay);
-  // PRINT("\t");
-  // PRINTLN(az);
 
   Side side = calculateSide(accelXYZ[0], accelXYZ[1], accelXYZ[2]);
 
