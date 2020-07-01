@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "fastmux.h"
+#include <RA4051.h>
 #include <Wire.h>
 #include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
@@ -23,9 +23,15 @@ enum class Side
   YellowSix,
 };
 
+#ifdef _AVR_IOM328P_H_
+#define ENABLE_PIN 7
+RA4051 mux(6, 5, 4);
+#elif ARDUINO_attiny3217
+#define ENABLE_PIN 10
+RA4051 mux(11, 12, 13);
+#endif
 // const float RANGE = 1.0;
 ADXL345 accel = ADXL345(); // USE FOR I2C COMMUNICATION
-Fast4051 mux;
 Side lastSide = Side::None;
 
 void setupTiltSensor()
@@ -43,6 +49,7 @@ int isOnSide(int a, int b, int c)
 {
   const int ZERO_TRESHOLD = 38;
   const int G_THRESHOLD = 50;
+  // When static, we know one axis will
   if (abs(a) > G_THRESHOLD && abs(b) < ZERO_TRESHOLD && abs(c) < ZERO_TRESHOLD)
   {
     return a > 0 ? (1) : -1;
@@ -137,7 +144,7 @@ void setup()
 #else
   PRINTLN("TINYCORE");
 #endif
-  mux.begin();
+  mux.setEnablePin(ENABLE_PIN);
   setupTiltSensor();
   PRINTLN("Ready player one");
 }
