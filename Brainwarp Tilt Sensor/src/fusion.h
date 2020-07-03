@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include <L3G.h>
 #include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
 enum class IMUSide
@@ -25,6 +26,19 @@ public:
         _accel.powerOn();
         _accel.setRangeSetting(8);
         _accel.setRate(100);
+
+        if (!_gyro.init(L3G::device_4200D))
+        {
+            Serial.println("Failed to autodetect gyro type!");
+            while (1)
+                ;
+        }
+        _gyro.enableDefault();
+
+        // DR = 01 (200 Hz ODR); BW = 11 (70 Hz bandwidth); PD = 1 (normal mode); Zen = Yen = Xen = 1 (all axes enabled)
+        _gyro.writeReg(L3G::CTRL_REG1, 0b01101111);
+        // FS = 11 (2000dps)
+        _gyro.writeReg(L3G::CTRL_REG4, 0b00110000);
     };
 
     void stop(){};
@@ -46,19 +60,26 @@ public:
         }
     };
 
-    IMUSide calculateSide(double &ax, double &ay, double &az)
+    IMUSide staticAnalysis(double accelValue[], double gryoValue[])
     {
-        IMUSide side;
+        IMUSide side = IMUSide::None;
 
-        auto mag = sqrt(sq(ax) + sq(ay) + sq(az));
+        // If the gryo values are high the toy is spinning.
+        const double GRYO_STATIC_THRESHOLD = 100;
+        if (gryoValue[0] + gryoValue[1] + gryoValue[2] > GRYO_STATIC_THRESHOLD)
+        {
+            return IMUSide::None;
+        }
+
+        auto mag = sqrt(sq(accelValue[0]) + sq(accelValue[1]) + sq(accelValue[2]));
 
         const double MAG_UPPER_LIMIT = 1.3;
         const double MAG_LOWER_LIMIT = 0.5;
         if (mag > MAG_LOWER_LIMIT && mag < MAG_UPPER_LIMIT)
         {
-            int xSide = isOnSide(ax, ay, az);
-            int ySide = isOnSide(ay, ax, az);
-            int zSide = isOnSide(az, ay, ax);
+            int xSide = isOnSide(accelValue[0], accelValue[1], accelValue[2]);
+            int ySide = isOnSide(accelValue[1], accelValue[0], accelValue[2]);
+            int zSide = isOnSide(accelValue[2], accelValue[1], accelValue[0]);
 
             if (xSide == 1 && ySide == 0 && zSide == 0)
                 side = IMUSide::xPlus;
@@ -76,16 +97,36 @@ public:
         return side;
     };
 
+    void computeScaledGyro(double scaledGyro[3], L3G::vector<int16_t> g)
+    {
+        const double dpsScale = 2000;
+        const double maxRange = 32768 - 1;
+        const double extraCorrection = 1.23;
+        const auto correctionFactor = dpsScale / maxRange * extraCorrection;
+
+        scaledGyro[0] = static_cast<double>(g.x) * correctionFactor;
+        scaledGyro[1] = static_cast<double>(g.y) * correctionFactor;
+        scaledGyro[2] = static_cast<double>(g.z) * correctionFactor;
+    };
+
     IMUSide process()
     {
         double scaledAccel[3];
-        _accel.get_Gxyz(scaledAccel);
+        double scaledGyro[3];
+        auto lastReadTime = micros();
 
-        _lastValidSide = calculateSide(scaledAccel[0], scaledAccel[1], scaledAccel[2]);
+        _accel.get_Gxyz(scaledAccel);
+        _gyro.read();
+        computeScaledGyro(scaledGyro, _gyro.g);
+
+        /// Static: Toy is not moving and is stable
+        IMUSide staticSide = staticAnalysis(scaledAccel, scaledGyro);
 
         return _lastValidSide;
     }
 
+    L3G _gyro;
     ADXL345 _accel = ADXL345();
     IMUSide _lastValidSide = IMUSide::None;
+    double _accumulatedDegree[3] = {0, 0, 0};
 };
