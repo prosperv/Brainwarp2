@@ -31,33 +31,24 @@ enum class ToySide
   YellowSix,
 };
 
-ToySide rotationCorrection(IMUSide side)
+ToySide rotationCorrection(int vector[3])
 {
   ToySide ret;
-  switch (side)
-  {
-  case IMUSide::xMinus:
-    ret = ToySide::OrangeFive;
-    break;
-  case IMUSide::xPlus:
+  if (vector[0] == 1 && vector[1] == 0 && vector[2] == 0)
     ret = ToySide::YellowSix;
-    break;
-  case IMUSide::yMinus:
-    ret = ToySide::RedTwo;
-    break;
-  case IMUSide::yPlus:
+  else if (vector[0] == -1 && vector[1] == 0 && vector[2] == 0)
+    ret = ToySide::OrangeFive;
+  else if (vector[0] == 0 && vector[1] == 1 && vector[2] == 0)
     ret = ToySide::PurpleOne;
-    break;
-  case IMUSide::zMinus:
-    ret = ToySide::WhiteFour;
-    break;
-  case IMUSide::zPlus:
+  else if (vector[0] == 0 && vector[1] == -1 && vector[2] == 0)
+    ret = ToySide::RedTwo;
+  else if (vector[0] == 0 && vector[1] == 0 && vector[2] == 1)
     ret = ToySide::GreenThree;
-    break;
-  default:
+  else if (vector[0] == 0 && vector[1] == 0 && vector[2] == -1)
+    ret = ToySide::WhiteFour;
+  else
     ret = ToySide::None;
-    break;
-  }
+
   return ret;
 }
 
@@ -122,9 +113,8 @@ void setup()
 
 void loop()
 {
-
-  IMUSide imuSide = fusion.process();
-  ToySide side = rotationCorrection(imuSide);
+  int *imuVector = fusion.process();
+  ToySide side = rotationCorrection(imuVector);
 
   if (side != lastSide)
   {

@@ -60,15 +60,20 @@ public:
         }
     };
 
-    IMUSide staticAnalysis(double accelValue[], double gryoValue[])
+    void resetAccumulatedDegree()
     {
-        IMUSide side = IMUSide::None;
+        _accumulatedDegree[0] = 0;
+        _accumulatedDegree[1] = 0;
+        _accumulatedDegree[2] = 0;
+    }
 
+    void staticAnalysis(int vector[3], const double accelValue[3], const double gryoValue[3])
+    {
         // If the gryo values are high the toy is spinning.
         const double GRYO_STATIC_THRESHOLD = 100;
         if (gryoValue[0] + gryoValue[1] + gryoValue[2] > GRYO_STATIC_THRESHOLD)
         {
-            return IMUSide::None;
+            return;
         }
 
         auto mag = sqrt(sq(accelValue[0]) + sq(accelValue[1]) + sq(accelValue[2]));
@@ -77,24 +82,46 @@ public:
         const double MAG_LOWER_LIMIT = 0.5;
         if (mag > MAG_LOWER_LIMIT && mag < MAG_UPPER_LIMIT)
         {
-            int xSide = isOnSide(accelValue[0], accelValue[1], accelValue[2]);
-            int ySide = isOnSide(accelValue[1], accelValue[0], accelValue[2]);
-            int zSide = isOnSide(accelValue[2], accelValue[1], accelValue[0]);
-
-            if (xSide == 1 && ySide == 0 && zSide == 0)
-                side = IMUSide::xPlus;
-            else if (xSide == -1 && ySide == 0 && zSide == 0)
-                side = IMUSide::xMinus;
-            else if (xSide == 0 && ySide == 1 && zSide == 0)
-                side = IMUSide::yPlus;
-            else if (xSide == 0 && ySide == -1 && zSide == 0)
-                side = IMUSide::yMinus;
-            else if (xSide == 0 && ySide == 0 && zSide == 1)
-                side = IMUSide::zPlus;
-            else if (xSide == 0 && ySide == 0 && zSide == -1)
-                side = IMUSide::zMinus;
+            vector[0] = isOnSide(accelValue[0], accelValue[1], accelValue[2]);
+            vector[1] = isOnSide(accelValue[1], accelValue[0], accelValue[2]);
+            vector[2] = isOnSide(accelValue[2], accelValue[1], accelValue[0]);
         }
-        return side;
+    };
+
+    IMUSide dynamicAnalysis(IMUSide lastSide, unsigned long usTimeDelta, double gryoValue[])
+    {
+        double gryoValueCopy[] = {gryoValue[0],
+                                  gryoValue[1],
+                                  gryoValue[2]};
+
+        // Zero out the axis if the toy is already on that axis, since the toy does not make
+        // moves to the opposite ends, and we don't care about landing on the same side, since
+        // the static analysis will handle that.
+        switch (lastSide)
+        {
+        case IMUSide::xMinus:
+        case IMUSide::xPlus:
+            gryoValueCopy[0] = 0;
+            break;
+        case IMUSide::yMinus:
+        case IMUSide::yPlus:
+            gryoValueCopy[1] = 0;
+            break;
+        case IMUSide::zMinus:
+        case IMUSide::zPlus:
+            gryoValueCopy[2] = 0;
+            break;
+        default:
+            return IMUSide::None;
+            break;
+        }
+
+        const auto timeDelta = usTimeDelta / 1000000.0;
+        _accumulatedDegree[0] = gryoValueCopy[0] * timeDelta;
+        _accumulatedDegree[1] = gryoValueCopy[1] * timeDelta;
+        _accumulatedDegree[2] = gryoValueCopy[2] * timeDelta;
+
+        // const double DEGREE_THRESHOLD = 30;
     };
 
     void computeScaledGyro(double scaledGyro[3], L3G::vector<int16_t> g)
@@ -109,24 +136,31 @@ public:
         scaledGyro[2] = static_cast<double>(g.z) * correctionFactor;
     };
 
-    IMUSide process()
+    int *process()
     {
         double scaledAccel[3];
         double scaledGyro[3];
-        auto lastReadTime = micros();
+        auto currentReadTime = micros();
+        auto readTimeDelta = _lastReadTime - currentReadTime;
 
         _accel.get_Gxyz(scaledAccel);
         _gyro.read();
         computeScaledGyro(scaledGyro, _gyro.g);
 
         /// Static: Toy is not moving and is stable
-        IMUSide staticSide = staticAnalysis(scaledAccel, scaledGyro);
+        int staticVector[3] = {0, 0, 0};
+        staticAnalysis(staticVector, scaledAccel, scaledGyro);
 
+        _lastReadTime = currentReadTime;
+        _lastValidSide[0] = staticVector[0];
+        _lastValidSide[1] = staticVector[1];
+        _lastValidSide[2] = staticVector[2];
         return _lastValidSide;
     }
 
     L3G _gyro;
     ADXL345 _accel = ADXL345();
-    IMUSide _lastValidSide = IMUSide::None;
+    int _lastValidSide[3] = {0, 0, 0};
+    unsigned long _lastReadTime = micros();
     double _accumulatedDegree[3] = {0, 0, 0};
 };
