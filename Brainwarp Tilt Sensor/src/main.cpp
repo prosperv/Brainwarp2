@@ -20,32 +20,73 @@ RA4051 mux(6, 5, 4);
 RA4051 mux(11, 12, 13);
 #endif
 
-void setSwitch(Side side)
+enum class ToySide
+{
+  None = 0,
+  PurpleOne,
+  RedTwo,
+  GreenThree,
+  WhiteFour,
+  OrangeFive,
+  YellowSix,
+};
+
+ToySide rotationCorrection(IMUSide side)
+{
+  ToySide ret;
+  switch (side)
+  {
+  case IMUSide::xMinus:
+    ret = ToySide::OrangeFive;
+    break;
+  case IMUSide::xPlus:
+    ret = ToySide::YellowSix;
+    break;
+  case IMUSide::yMinus:
+    ret = ToySide::RedTwo;
+    break;
+  case IMUSide::yPlus:
+    ret = ToySide::PurpleOne;
+    break;
+  case IMUSide::zMinus:
+    ret = ToySide::WhiteFour;
+    break;
+  case IMUSide::zPlus:
+    ret = ToySide::GreenThree;
+    break;
+  default:
+    ret = ToySide::None;
+    break;
+  }
+  return ret;
+}
+
+void setSwitch(ToySide side)
 {
   uint8_t muxValue = mux.getCurrentPin();
 
   mux.off();
   switch (side)
   {
-  case Side::PurpleOne:
+  case ToySide::PurpleOne:
     muxValue = 3; //3
     break;
-  case Side::RedTwo:
+  case ToySide::RedTwo:
     muxValue = 5; //5
     break;
-  case Side::GreenThree:
+  case ToySide::GreenThree:
     muxValue = 1; //1
     break;
-  case Side::WhiteFour:
+  case ToySide::WhiteFour:
     muxValue = 7; //7
     break;
-  case Side::OrangeFive:
+  case ToySide::OrangeFive:
     muxValue = 6; //6
     break;
-  case Side::YellowSix:
+  case ToySide::YellowSix:
     muxValue = 4; //4
     break;
-  case Side::None:
+  case ToySide::None:
     muxValue = -1;
   default:
     break;
@@ -60,7 +101,7 @@ void setSwitch(Side side)
 }
 
 Fusion fusion;
-Side lastSide;
+ToySide lastSide;
 
 void setup()
 {
@@ -82,7 +123,9 @@ void setup()
 void loop()
 {
 
-  Side side = fusion.process();
+  IMUSide imuSide = fusion.process();
+  ToySide side = rotationCorrection(imuSide);
+
   if (side != lastSide)
   {
     PRINT("Side: ");

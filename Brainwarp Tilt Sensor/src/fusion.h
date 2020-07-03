@@ -2,15 +2,15 @@
 #include <Wire.h>
 #include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
-enum class Side
+enum class IMUSide
 {
     None = 0,
-    PurpleOne,
-    RedTwo,
-    GreenThree,
-    WhiteFour,
-    OrangeFive,
-    YellowSix,
+    xPlus,
+    xMinus,
+    yPlus,
+    yMinus,
+    zPlus,
+    zMinus,
 };
 
 class Fusion
@@ -25,7 +25,6 @@ public:
         _accel.powerOn();
         _accel.setRangeSetting(8);
         _accel.setRate(100);
-
     };
 
     void stop(){};
@@ -47,9 +46,9 @@ public:
         }
     };
 
-    Side calculateSide(double &ax, double &ay, double &az)
+    IMUSide calculateSide(double &ax, double &ay, double &az)
     {
-        Side side;
+        IMUSide side;
 
         auto mag = sqrt(sq(ax) + sq(ay) + sq(az));
 
@@ -62,23 +61,22 @@ public:
             int zSide = isOnSide(az, ay, ax);
 
             if (xSide == 1 && ySide == 0 && zSide == 0)
-                side = Side::YellowSix;
+                side = IMUSide::xPlus;
             else if (xSide == -1 && ySide == 0 && zSide == 0)
-                side = Side::OrangeFive;
+                side = IMUSide::xMinus;
             else if (xSide == 0 && ySide == 1 && zSide == 0)
-                side = Side::PurpleOne;
+                side = IMUSide::yPlus;
             else if (xSide == 0 && ySide == -1 && zSide == 0)
-                side = Side::RedTwo;
+                side = IMUSide::yMinus;
             else if (xSide == 0 && ySide == 0 && zSide == 1)
-                side = Side::GreenThree;
+                side = IMUSide::zPlus;
             else if (xSide == 0 && ySide == 0 && zSide == -1)
-                side = Side::WhiteFour;
+                side = IMUSide::zMinus;
         }
         return side;
     };
 
-
-    Side process()
+    IMUSide process()
     {
         double scaledAccel[3];
         _accel.get_Gxyz(scaledAccel);
@@ -89,5 +87,5 @@ public:
     }
 
     ADXL345 _accel = ADXL345();
-    Side _lastValidSide = Side::None;
+    IMUSide _lastValidSide = IMUSide::None;
 };
