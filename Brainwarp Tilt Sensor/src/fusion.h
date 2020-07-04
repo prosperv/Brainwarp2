@@ -17,6 +17,30 @@ enum class IMUSide
     zMinus,
 };
 
+// The normal abs for some reason don't work well with float and double
+template <typename T>
+T myABS(T x) { return x > 0 ? x : -x; };
+
+template <typename Ta, typename Tb>
+float vector_dot(const Ta *a, const Tb *b)
+{
+    return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
+};
+
+void vector_int_add(int out[], const int a[], const int b[])
+{
+    out[0] = a[0] + b[0];
+    out[1] = a[1] + b[1];
+    out[2] = a[2] + b[2];
+
+    if (out[0] != 0)
+        out[0] /= out[0];
+    if (out[1] != 0)
+        out[1] /= out[1];
+    if (out[2] != 0)
+        out[2] /= out[2];
+};
+
 class Fusion
 {
 public:
@@ -27,7 +51,7 @@ public:
         Wire.setClock(400000);
         // initialize device
         _accel.powerOn();
-        _accel.setRangeSetting(8);
+        _accel.setRangeSetting(2);
         _accel.setRate(100);
 
         if (!_gyro.init(L3G::device_4200D))
@@ -46,14 +70,14 @@ public:
 
     void stop(){};
 
-    int isOnSide(int sideToCheck, int axis1, int axis2)
+    int isOnSide(double sideToCheck, double axis1, double axis2)
     {
-        const int ZERO_TRESHOLD = 0.59;
-        const int G_THRESHOLD = 0.78;
+        const double ZERO_TRESHOLD = 0.58;
+        const double G_THRESHOLD = 0.75;
 
         // We know we're on a side if one axis has a high values while the other 2 axsi are near zero.
         // Ex. x: 0.01, y: -0.01, z: 1.1
-        if (abs(sideToCheck) > G_THRESHOLD && abs(axis1) < ZERO_TRESHOLD && abs(axis2) < ZERO_TRESHOLD)
+        if (myABS(sideToCheck) > G_THRESHOLD && myABS(axis1) < ZERO_TRESHOLD && myABS(axis2) < ZERO_TRESHOLD)
         {
             return sideToCheck > 0 ? (1) : -1;
         }
@@ -79,7 +103,7 @@ public:
             return;
         }
 
-        auto mag = sqrt(sq(accelValue[0]) + sq(accelValue[1]) + sq(accelValue[2]));
+        auto mag = sqrt(vector_dot(accelValue, accelValue));
 
         const double MAG_UPPER_LIMIT = 1.3;
         const double MAG_LOWER_LIMIT = 0.5;
@@ -153,11 +177,13 @@ public:
         /// Static: Toy is not moving and is stable
         int staticVector[3] = {0, 0, 0};
         staticAnalysis(staticVector, scaledAccel, scaledGyro);
+        int dynamicVector[3] = {0, 0, 0};
+        // dynamicAnalysis(dynamicVector, _lastValidSide, readTimeDelta, scaledGyro);
 
+        vector_int_add(_lastValidSide, staticVector, dynamicVector);
         _lastReadTime = currentReadTime;
-        _lastValidSide[0] = staticVector[0];
-        _lastValidSide[1] = staticVector[1];
-        _lastValidSide[2] = staticVector[2];
+
+        auto totalProcessTime = currentReadTime - micros();
         return _lastValidSide;
     }
 
