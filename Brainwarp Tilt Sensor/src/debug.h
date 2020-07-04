@@ -4,6 +4,6 @@
 #define PRINT Serial.print
 #define PRINTLN Serial.println
 #else
-#define PRINT
-#define PRINTLN
+#define PRINT(x)
+#define PRINTLN(x)
 #endif
