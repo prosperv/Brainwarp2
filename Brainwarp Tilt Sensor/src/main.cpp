@@ -79,8 +79,6 @@ void setSwitch(ToySide side)
   }
   if (muxValue != -1)
   {
-    PRINT("mux: ");
-    PRINTLN(muxValue);
     mux.setPin(muxValue);
     mux.on();
   }
@@ -88,6 +86,7 @@ void setSwitch(ToySide side)
 
 Fusion fusion;
 ToySide lastSide;
+auto _lastReadTime = micros();
 
 void setup()
 {
@@ -108,17 +107,24 @@ void setup()
 
 void loop()
 {
+  auto readTime = micros();
+  auto readDiffTime = _lastReadTime - readTime;
+  if (readDiffTime >= DELAY_US)
+  {
   int *imuVector = fusion.process();
+
   ToySide side = rotationCorrection(imuVector);
 
   if (side != lastSide)
   {
-    PRINT("Side: ");
-    PRINTLN(static_cast<int>(side));
+      // PRINT("Side: ");
+      // PRINTLN(static_cast<int>(side));
     setSwitch(side);
     lastSide = side;
   }
+    _lastReadTime = readTime;
 #ifdef DEBUG
-  delay(50);
+    delay(100);
 #endif
+}
 }
