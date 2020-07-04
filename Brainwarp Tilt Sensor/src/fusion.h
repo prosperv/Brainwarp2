@@ -3,6 +3,9 @@
 #include <L3G.h>
 #include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
+#define DEBUG
+#include "debug.h"
+
 enum class IMUSide
 {
     None = 0,
@@ -29,7 +32,7 @@ public:
 
         if (!_gyro.init(L3G::device_4200D))
         {
-            Serial.println("Failed to autodetect gyro type!");
+            PRINTLN("Failed to autodetect gyro type!");
             while (1)
                 ;
         }

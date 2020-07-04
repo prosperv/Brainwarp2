@@ -4,13 +4,7 @@
 #include "fusion.h"
 
 #define DEBUG
-#ifdef DEBUG
-#define PRINT Serial.print
-#define PRINTLN Serial.println
-#else
-#define PRINT
-#define PRINTLN
-#endif
+#include "debug.h"
 
 #ifdef _AVR_IOM328P_H_
 #define ENABLE_PIN 7
