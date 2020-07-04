@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <RA4051.h>
 #include <Wire.h>
 #include "fusion.h"
 
@@ -7,9 +6,11 @@
 #include "debug.h"
 
 #ifdef _AVR_IOM328P_H_
+#include <RA4051.h>
 #define ENABLE_PIN 7
 RA4051 mux(6, 5, 4);
 #elif ARDUINO_attiny3217
+#include "RA4051.h"
 #define ENABLE_PIN 10
 RA4051 mux(11, 12, 13);
 #endif
