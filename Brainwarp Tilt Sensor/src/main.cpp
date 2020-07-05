@@ -5,6 +5,9 @@
 #define DEBUG
 #include "debug.h"
 
+#define SENSOR_UPDATE_RATE_HZ 100
+const unsigned long DELAY_US = (SENSOR_UPDATE_RATE_HZ * 100);
+
 #ifdef _AVR_IOM328P_H_
 #include <RA4051.h>
 #define ENABLE_PIN 7
@@ -111,20 +114,20 @@ void loop()
   auto readDiffTime = _lastReadTime - readTime;
   if (readDiffTime >= DELAY_US)
   {
-  int *imuVector = fusion.process();
+    int *imuVector = fusion.process();
 
-  ToySide side = rotationCorrection(imuVector);
+    ToySide side = rotationCorrection(imuVector);
 
-  if (side != lastSide)
-  {
-      // PRINT("Side: ");
-      // PRINTLN(static_cast<int>(side));
-    setSwitch(side);
-    lastSide = side;
-  }
+    if (side != lastSide)
+    {
+      PRINT("Side: ");
+      PRINTLN(static_cast<int>(side));
+      setSwitch(side);
+      lastSide = side;
+    }
     _lastReadTime = readTime;
 #ifdef DEBUG
     delay(100);
 #endif
-}
+  }
 }

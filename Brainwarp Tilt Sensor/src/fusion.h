@@ -91,12 +91,12 @@ public:
 
     int isOnSide(double sideToCheck, double axis1, double axis2)
     {
-        const double ZERO_TRESHOLD = 0.60;
-        const double G_THRESHOLD = 0.75;
+        const double G_THRESHOLD = 0.60;
 
         // We know we're on a side if one axis has a high values while the other 2 axsi are near zero.
         // Ex. x: 0.01, y: -0.01, z: 1.1
-        if (myABS(sideToCheck) > G_THRESHOLD && myABS(axis1) < ZERO_TRESHOLD && myABS(axis2) < ZERO_TRESHOLD)
+        // if (myABS(sideToCheck) > G_THRESHOLD && myABS(axis1) < ZERO_TRESHOLD && myABS(axis2) < ZERO_TRESHOLD)
+        if (myABS(sideToCheck) > G_THRESHOLD)
         {
             return sideToCheck > 0 ? (1) : -1;
         }
@@ -113,25 +113,28 @@ public:
         _accumulatedDegree[2] = 0;
     }
 
-    void staticAnalysis(int vector[3], const double accelValue[3], const double gryoValue[3])
+    bool staticAnalysis(int vector[3], const double accelValue[3], const double gryoValue[3])
     {
         // If the gryo values are high the toy is spinning.
-        const double GRYO_STATIC_THRESHOLD = 100;
-        if (gryoValue[0] + gryoValue[1] + gryoValue[2] > GRYO_STATIC_THRESHOLD)
+        const double GRYO_STATIC_THRESHOLD = 150;
+        const auto gyroFastMagnitude = myABS(gryoValue[0]) + myABS(gryoValue[1]) + myABS(gryoValue[2]);
+        if (gyroFastMagnitude > GRYO_STATIC_THRESHOLD)
         {
-            return;
+            return false;
         }
 
-        auto mag = sqrt(vector_dot(accelValue, accelValue));
+        auto accelMagnitude = sqrt(vector_dot(accelValue, accelValue));
 
         const double MAG_UPPER_LIMIT = 1.3;
-        const double MAG_LOWER_LIMIT = 0.5;
-        if (mag > MAG_LOWER_LIMIT && mag < MAG_UPPER_LIMIT)
+        const double MAG_LOWER_LIMIT = 0.6;
+        if (accelMagnitude > MAG_LOWER_LIMIT && accelMagnitude < MAG_UPPER_LIMIT)
         {
             vector[0] = isOnSide(accelValue[0], accelValue[1], accelValue[2]);
             vector[1] = isOnSide(accelValue[1], accelValue[0], accelValue[2]);
             vector[2] = isOnSide(accelValue[2], accelValue[1], accelValue[0]);
+            return true;
         }
+        return false;
     };
 
     bool dynamicAnalysis(int vector[3], const int lastVector[3], const unsigned long usTimeDelta, const double gryoValue[])
@@ -216,7 +219,7 @@ public:
         const double GYRO_MOVEMENT_THRESHOLD = 100;
         auto gyroMagnitude = sqrt(vector_dot(scaledGyro, scaledGyro));
 
-        if (gyroMagnitude < GYRO_MOVEMENT_THRESHOLD && staticStatus)
+        if (staticStatus && vector_dot(staticVector, staticVector) == 1)
         {
             resetAccumulatedDegree();
         };
