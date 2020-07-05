@@ -2,7 +2,7 @@
 #include <Wire.h>
 #include "fusion.h"
 
-#define DEBUG
+// #define DEBUG
 #include "debug.h"
 
 #define SENSOR_UPDATE_RATE_HZ 100

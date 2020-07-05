@@ -3,7 +3,7 @@
 #include <L3G.h>
 #include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
-#define DEBUG
+// #define DEBUG
 #include "debug.h"
 
 enum class IMUSide
@@ -113,6 +113,11 @@ public:
         _accumulatedDegree[2] = 0;
     }
 
+    /* 
+    Static analysis uses the accelerometer to determine the orientation of the toy. However
+    the accelerometer is only reliable when the toy is still and the more the toy move the less
+    reliable the accelerometer is.
+    */
     bool staticAnalysis(int vector[3], const double accelValue[3], const double gryoValue[3])
     {
         // If the gryo values are high the toy is spinning.
@@ -137,6 +142,11 @@ public:
         return false;
     };
 
+    /*
+    Dynamic analysis use the gryoscope to determine the change in orientation and by integrating
+    we can get the new orientation. However over time the integration value will become 
+    inaccurate. Also it cannot determine orientation on its own thus the use of the accelerometer. 
+    */
     bool dynamicAnalysis(int vector[3], const int lastVector[3], const unsigned long usTimeDelta, const double gryoValue[])
     {
         bool ret = false;
@@ -163,7 +173,7 @@ public:
         _accumulatedDegree[1] += gryoValueCopy[1] * timeDelta;
         _accumulatedDegree[2] += gryoValueCopy[2] * timeDelta;
 
-        const double DEGREE_THRESHOLD = 50;
+        const double DEGREE_THRESHOLD = 60;
         if (myABS(_accumulatedDegree[0]) > DEGREE_THRESHOLD)
         {
             int value = _accumulatedDegree[0] > 0 ? 1 : -1;
@@ -214,10 +224,6 @@ public:
         /// Static: Toy is not moving and is stable
         int staticVector[3] = {0, 0, 0};
         bool staticStatus = staticAnalysis(staticVector, scaledAccel, scaledGyro);
-
-        bool print = false;
-        const double GYRO_MOVEMENT_THRESHOLD = 100;
-        auto gyroMagnitude = sqrt(vector_dot(scaledGyro, scaledGyro));
 
         if (staticStatus && vector_dot(staticVector, staticVector) == 1)
         {
