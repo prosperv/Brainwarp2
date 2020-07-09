@@ -90,10 +90,23 @@ void setSwitch(ToySide side)
 Fusion fusion;
 ToySide lastSide;
 auto _lastReadTime = micros();
+#define POWERONOFF_PIN 15
+
+void powerOnOff()
+{
+  auto value = digitalRead(POWERONOFF_PIN);
+  if (value)
+  {
+    PRINTLN("Power On");
+  }
+  else
+  {
+    PRINTLN("Power Off");
+  }
+}
 
 void setup()
 {
-  // initialize serial communication
 #ifdef DEBUG
   Serial.begin(115200);
 #endif
@@ -102,6 +115,10 @@ void setup()
   PRINTLN("UNO");
 #else
   PRINTLN("TINYCORE");
+  pinMode(POWERONOFF_PIN, INPUT_PULLUP);
+  noInterrupts();
+  attachInterrupt(POWERONOFF_PIN, powerOnOff, CHANGE);
+  interrupts();
 #endif
   fusion.begin();
   mux.setEnablePin(ENABLE_PIN);
