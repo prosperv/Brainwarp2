@@ -19,23 +19,23 @@ enum class IMUSide
 
 // The normal abs for some reason don't work well with float and double
 template <typename T>
-T myABS(T x) { return x > 0 ? x : -x; };
+static T myABS(T x) { return x > 0 ? x : -x; };
 
 template <typename Ta, typename Tb>
-float vector_dot(const Ta *a, const Tb *b)
+static float vector_dot(const Ta *a, const Tb *b)
 {
     return (a[0] * b[0]) + (a[1] * b[1]) + (a[2] * b[2]);
 };
 
 template <typename Ta, typename Tb, typename To>
-void vector_cross(To *out, const Ta *a, const Tb *b)
+static void vector_cross(To *out, const Ta *a, const Tb *b)
 {
     out[0] = (a[1] * b[2]) - (a[2] * b[1]);
     out[1] = (a[2] * b[0]) - (a[0] * b[2]);
     out[2] = (a[0] * b[1]) - (a[1] * b[0]);
 };
 
-void vector_int_add(int out[], const int a[], const int b[])
+static void vector_int_add(int out[], const int a[], const int b[])
 {
     out[0] = a[0] + b[0];
     out[1] = a[1] + b[1];
@@ -50,7 +50,7 @@ void vector_int_add(int out[], const int a[], const int b[])
 };
 
 template <typename T>
-bool vector_equality(T *left, T *right)
+bool vector_equality(const T *left, const T *right)
 {
     return left[0] == right[0] && left[1] == right[1] && left[2] == right[2];
 };
@@ -89,7 +89,7 @@ public:
         _gyro.writeReg(L3G::CTRL_REG1, 0b01101111);
     };
 
-    int isOnSide(double sideToCheck, double axis1, double axis2)
+    int isOnSide(const double sideToCheck, const double axis1, const double axis2)
     {
         const double G_THRESHOLD = 0.60;
 
@@ -198,7 +198,7 @@ public:
         return ret;
     };
 
-    void computeScaledGyro(double scaledGyro[3], L3G::vector<int16_t> g)
+    void computeScaledGyro(double scaledGyro[3], const L3G::vector<int16_t> g)
     {
         const double dpsScale = 2000;
         const double maxRange = 32768 - 1;
