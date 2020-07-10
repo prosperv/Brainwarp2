@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "copy",
+      "type": "shell",
+      "command": "XCOPY /C /Y \"${workspaceFolder}\\src\\*\" \"${workspaceFolder}\\arduino\\\"",
+      "problemMatcher": []
+    },
+    {
+      "type": "PlatformIO",
+      "task": "Build",
+      "problemMatcher": ["$platformio"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "PlatformIO: Build",
+      "dependsOn": ["copy"]
+    }
+  ]
+}
