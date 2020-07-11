@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include "fusion.h"
+#include "LowPower.h"
 
 // #define DEBUG
 #include "debug.h"
@@ -90,21 +91,14 @@ void setSwitch(ToySide side)
 Fusion fusion;
 ToySide lastSide;
 auto _lastReadTime = micros();
-#define POWERONOFF_PIN 15
 
-void powerOnOff()
-{
-  auto value = digitalRead(POWERONOFF_PIN);
-  if (value)
-  {
-    PRINTLN("Power On");
-  }
-  else
-  {
-    PRINTLN("Power Off");
-  }
-}
+/*
+  Power on current = 14.20mA @5V
+  enterPowerDown() = 7.28mA @ 3.3V
+  enterIdle = 12.20mA @ 3.3V
 
+
+*/
 void setup()
 {
 #ifdef DEBUG
@@ -115,9 +109,11 @@ void setup()
   PRINTLN("UNO");
 #else
   PRINTLN("TINYCORE");
-  pinMode(POWERONOFF_PIN, INPUT_PULLUP);
   noInterrupts();
-  attachInterrupt(POWERONOFF_PIN, powerOnOff, CHANGE);
+
+  pinMode(POWERONOFF_PIN, INPUT_PULLUP);
+  attachInterrupt(POWERONOFF_PIN, powerOnOff_interruptHandler, CHANGE);
+
   interrupts();
 #endif
   fusion.begin();
@@ -127,6 +123,11 @@ void setup()
 
 void loop()
 {
+  while (sleep)
+  {
+    enterPowerDown();
+  }
+
   auto readTime = micros();
   auto readDiffTime = _lastReadTime - readTime;
   if (readDiffTime >= DELAY_US)
@@ -143,6 +144,8 @@ void loop()
       lastSide = side;
     }
     _lastReadTime = readTime;
+    enterIdle();
+
 #ifdef DEBUG
     delay(100);
 #endif
