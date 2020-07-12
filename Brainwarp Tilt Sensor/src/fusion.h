@@ -76,8 +76,12 @@ public:
         }
         _gyro.enableDefault();
 
+        // DR = 00 (100Hz)
+        // DR = 01 (200Hz)
+        // DR = 10 (400Hz)
+        // DR = 11 (800Hz)
         // DR = 01 (200 Hz ODR); BW = 11 (70 Hz bandwidth); PD = 1 (normal mode); Zen = Yen = Xen = 1 (all axes enabled)
-        _gyro.writeReg(L3G::CTRL_REG1, 0b01101111);
+        _gyro.writeReg(L3G::CTRL_REG1, 0b00101111);
         // FS = 11 (2000dps)
         _gyro.writeReg(L3G::CTRL_REG4, 0b00110000);
     };
