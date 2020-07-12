@@ -6,7 +6,7 @@
 // #define DEBUG
 #include "debug.h"
 
-#define SENSOR_UPDATE_RATE_HZ 100
+#define SENSOR_UPDATE_RATE_HZ 50
 const unsigned long DELAY_US = (SENSOR_UPDATE_RATE_HZ * 100);
 
 #ifdef _AVR_IOM328P_H_
@@ -123,10 +123,12 @@ void setup()
 
 void loop()
 {
-  while (sleep)
-  {
-    enterPowerDown();
-  }
+  // while (sleep)
+  // {
+  //   PRINTLN("Entering PowerDown");
+  //   enterPowerDown();
+  //   PRINTLN("I'm AWAKE");
+  // }
 
   auto readTime = micros();
   auto readDiffTime = _lastReadTime - readTime;
