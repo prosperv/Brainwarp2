@@ -7,6 +7,7 @@
 
   PowerDown
   40uA @ 3.3V
+  23uA @ 3.3V
   Wakes on pin change
 
   Standby
@@ -20,7 +21,7 @@
 volatile bool sleep = false;
 void powerOnOff_interruptHandler()
 {
-  sleep = !digitalRead(POWERONOFF_PIN);
+  sleep = digitalRead(POWERONOFF_PIN);
 }
 
 void idle()
@@ -32,7 +33,7 @@ void setup()
   Serial.begin(115200);
 #ifdef _AVR_IOM328P_H_
 #else
-  pinMode(POWERONOFF_PIN, INPUT);
+  pinMode(POWERONOFF_PIN, INPUT_PULLUP);
   noInterrupts();
   attachInterrupt(POWERONOFF_PIN, powerOnOff_interruptHandler, CHANGE);
   interrupts();
