@@ -2,8 +2,6 @@
 #include <Wire.h>
 #include "fusion.h"
 #include "LowPower.h"
-
-// #define DEBUG
 #include "debug.h"
 
 #define SENSOR_UPDATE_RATE_HZ 50
@@ -109,12 +107,6 @@ void setup()
   PRINTLN("UNO");
 #else
   PRINTLN("TINYCORE");
-  noInterrupts();
-
-  pinMode(POWERONOFF_PIN, INPUT_PULLUP);
-  attachInterrupt(POWERONOFF_PIN, powerOnOff_interruptHandler, CHANGE);
-
-  interrupts();
 #endif
   fusion.begin();
   mux.setEnablePin(ENABLE_PIN);
@@ -123,13 +115,6 @@ void setup()
 
 void loop()
 {
-  // while (sleep)
-  // {
-  //   PRINTLN("Entering PowerDown");
-  //   enterPowerDown();
-  //   PRINTLN("I'm AWAKE");
-  // }
-
   auto readTime = micros();
   auto readDiffTime = _lastReadTime - readTime;
   if (readDiffTime >= DELAY_US)
@@ -146,7 +131,9 @@ void loop()
       lastSide = side;
     }
     _lastReadTime = readTime;
+    PRINT("Idle");
     enterIdle();
+    PRINTLN("Backup");
 
 #ifdef DEBUG
     delay(100);

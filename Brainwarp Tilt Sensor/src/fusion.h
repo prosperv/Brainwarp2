@@ -3,7 +3,6 @@
 #include <L3G.h>
 #include <SparkFun_ADXL345.h> // SparkFun ADXL345 Library
 
-// #define DEBUG
 #include "debug.h"
 
 enum class IMUSide
@@ -66,7 +65,7 @@ public:
         // initialize device
         _accel.powerOn();
         _accel.setRangeSetting(2);
-        _accel.setRate(100);
+        _accel.set_bw(ADXL345_BW_50);
 
         if (!_gyro.init(L3G::device_4200D))
         {
@@ -86,11 +85,24 @@ public:
         _gyro.writeReg(L3G::CTRL_REG4, 0b00110000);
     };
 
+    void go()
+    {
+        auto byte = _gyro.readReg(L3G::CTRL_REG1);
+        byte |= 0b00001000;
+        _gyro.writeReg(L3G::CTRL_REG1, byte);
+
+        _accel.set_bw(ADXL345_BW_50);
+        _accel.setLowPower(0);
+    };
+
     void stop()
     {
         auto byte = _gyro.readReg(L3G::CTRL_REG1);
         byte &= ~(0b00001000);
-        _gyro.writeReg(L3G::CTRL_REG1, 0b01101111);
+        _gyro.writeReg(L3G::CTRL_REG1, byte);
+
+        _accel.set_bw(ADXL345_BW_0_05);
+        _accel.setLowPower(1);
     };
 
     int isOnSide(const double sideToCheck, const double axis1, const double axis2)
