@@ -93,7 +93,7 @@ public:
     {
         const double G_THRESHOLD = 0.60;
 
-        // We know we're on a side if one axis has a high values while the other 2 axsi are near zero.
+        // We know we're on a side if one axis has a high values while the other 2 axis are near zero.
         // Ex. x: 0.01, y: -0.01, z: 1.1
         // if (myABS(sideToCheck) > G_THRESHOLD && myABS(axis1) < ZERO_TRESHOLD && myABS(axis2) < ZERO_TRESHOLD)
         if (myABS(sideToCheck) > G_THRESHOLD)
@@ -120,7 +120,7 @@ public:
     */
     bool staticAnalysis(int vector[3], const double accelValue[3], const double gryoValue[3])
     {
-        // If the gryo values are high the toy is spinning.
+        // Checking to see if the top is spinning too much.
         const double GRYO_STATIC_THRESHOLD = 150;
         const auto gyroFastMagnitude = myABS(gryoValue[0]) + myABS(gryoValue[1]) + myABS(gryoValue[2]);
         if (gyroFastMagnitude > GRYO_STATIC_THRESHOLD)
@@ -130,16 +130,21 @@ public:
 
         auto accelMagnitude = sqrt(vector_dot(accelValue, accelValue));
 
+        // Even if the toy is not spinning, too much translational movement can lower our confidence in
+        // determining orientation.
         const double MAG_UPPER_LIMIT = 1.3;
         const double MAG_LOWER_LIMIT = 0.6;
-        if (accelMagnitude > MAG_LOWER_LIMIT && accelMagnitude < MAG_UPPER_LIMIT)
+        if (accelMagnitude < MAG_LOWER_LIMIT && accelMagnitude > MAG_UPPER_LIMIT)
         {
-            vector[0] = isOnSide(accelValue[0], accelValue[1], accelValue[2]);
-            vector[1] = isOnSide(accelValue[1], accelValue[0], accelValue[2]);
-            vector[2] = isOnSide(accelValue[2], accelValue[1], accelValue[0]);
-            return true;
+            return false;
         }
-        return false;
+
+        // Simplify the orientation vector to unit vectors.
+        vector[0] = isOnSide(accelValue[0], accelValue[1], accelValue[2]);
+        vector[1] = isOnSide(accelValue[1], accelValue[0], accelValue[2]);
+        vector[2] = isOnSide(accelValue[2], accelValue[1], accelValue[0]);
+
+        return true;
     };
 
     /*
@@ -158,9 +163,8 @@ public:
         // if (vector_dot(lastVector, lastVector) == 0)
         //     return;
 
-        // Zero out the axis if the toy is already on that axis, since the toy does not make
-        // moves to the opposite ends, and we don't care about landing on the same side, since
-        // the static analysis will handle that.
+        // Zero out gyro value that is parallel to gravity as that doesn't really
+        // affect the orientation that we care about.
         if (lastVector[0] != 0)
             gryoValueCopy[0] = 0;
         if (lastVector[1] != 0)
@@ -168,11 +172,13 @@ public:
         if (lastVector[2] != 0)
             gryoValueCopy[2] = 0;
 
+        // Integrate value of from the gryo
         const auto timeDelta = usTimeDelta / 1000000.0;
         _accumulatedDegree[0] += gryoValueCopy[0] * timeDelta;
         _accumulatedDegree[1] += gryoValueCopy[1] * timeDelta;
         _accumulatedDegree[2] += gryoValueCopy[2] * timeDelta;
 
+        // Check if toy has rotated enough.
         const double DEGREE_THRESHOLD = 60;
         if (myABS(_accumulatedDegree[0]) > DEGREE_THRESHOLD)
         {
@@ -198,6 +204,7 @@ public:
         return ret;
     };
 
+    // Convert raw data from gryo to degrees per second.
     void computeScaledGyro(double scaledGyro[3], L3G::vector<int16_t> g)
     {
         const double dpsScale = 2000;
@@ -227,34 +234,40 @@ public:
 
         if (staticStatus && vector_dot(staticVector, staticVector) == 1)
         {
+            // We have a high confidence orientation. Reset the gryo orientation tracking.
             resetAccumulatedDegree();
+            // Should we just return at this point?
         };
 
         int dynamicVector[3] = {0, 0, 0};
-        bool dynamicStatus = dynamicAnalysis(dynamicVector, _lastValidSide, readTimeDelta, scaledGyro);
+        bool dynamicStatus = dynamicAnalysis(dynamicVector, _lastValidOrientation, readTimeDelta, scaledGyro);
 
-        vector_int_add(_lastSide, staticVector, dynamicVector);
-        if (vector_dot(_lastSide, _lastSide) == 1)
+        // Check to see if the orientation from static analysis agree with dynamic analysis
+        vector_int_add(_currentOrientation, staticVector, dynamicVector);
+        if (vector_dot(_currentOrientation, _currentOrientation) == 1)
         {
-            if (!vector_equality(_lastValidSide, _lastSide))
+            // Check if we have a new orientation
+            if (!vector_equality(_lastValidOrientation, _currentOrientation))
             {
                 resetAccumulatedDegree();
             }
-            _lastValidSide[0] = _lastSide[0];
-            _lastValidSide[1] = _lastSide[1];
-            _lastValidSide[2] = _lastSide[2];
+            _lastValidOrientation[0] = _currentOrientation[0];
+            _lastValidOrientation[1] = _currentOrientation[1];
+            _lastValidOrientation[2] = _currentOrientation[2];
         }
         _lastReadTime = currentReadTime;
 
+#ifdef DEBUG
         auto totalProcessTime = micros() - currentReadTime;
+#endif
 
-        return _lastSide;
+        return _currentOrientation;
     }
 
     L3G _gyro;
     ADXL345 _accel = ADXL345();
-    int _lastSide[3] = {1, 0, 0};
-    int _lastValidSide[3] = {1, 0, 0};
+    int _currentOrientation[3] = {1, 0, 0};
+    int _lastValidOrientation[3] = {1, 0, 0};
     unsigned long _lastReadTime = micros();
     double _accumulatedDegree[3] = {0, 0, 0};
 };
