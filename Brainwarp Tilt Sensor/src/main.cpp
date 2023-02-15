@@ -110,12 +110,12 @@ void setup()
   mux.setEnablePin(ENABLE_PIN);
   PRINTLN("Ready player one");
 }
-
 void loop()
 {
   auto readTime = micros();
   auto readDiffTime = _lastReadTime - readTime;
-  if (readDiffTime >= DELAY_US)
+  // Minus one millisec to accommodate for the 1ms delay.
+  if (readDiffTime >= DELAY_US - 1000)
   {
     int *imuVector = fusion.process();
 
@@ -133,4 +133,5 @@ void loop()
     delay(100);
 #endif
   }
+  delay(1);
 }

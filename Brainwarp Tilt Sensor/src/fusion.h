@@ -236,25 +236,20 @@ public:
         {
             // We have a high confidence orientation. Reset the gryo orientation tracking.
             resetAccumulatedDegree();
-            // Should we just return at this point?
         };
 
         int dynamicVector[3] = {0, 0, 0};
         bool dynamicStatus = dynamicAnalysis(dynamicVector, _lastValidOrientation, readTimeDelta, scaledGyro);
 
-        // Check to see if the orientation from static analysis agree with dynamic analysis
-        vector_int_add(_currentOrientation, staticVector, dynamicVector);
-        if (vector_dot(_currentOrientation, _currentOrientation) == 1)
+        // Dynamic analysis looks good!
+        if (dynamicStatus)
         {
-            // Check if we have a new orientation
-            if (!vector_equality(_lastValidOrientation, _currentOrientation))
-            {
-                resetAccumulatedDegree();
-            }
-            _lastValidOrientation[0] = _currentOrientation[0];
-            _lastValidOrientation[1] = _currentOrientation[1];
-            _lastValidOrientation[2] = _currentOrientation[2];
+            resetAccumulatedDegree();
+            _currentOrientation[0] = dynamicVector[0];
+            _currentOrientation[1] = dynamicVector[1];
+            _currentOrientation[2] = dynamicVector[2];
         }
+
         _lastReadTime = currentReadTime;
 
 #ifdef DEBUG
