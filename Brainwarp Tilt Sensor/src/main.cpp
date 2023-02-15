@@ -29,6 +29,7 @@ enum class ToySide
   YellowSix,
 };
 
+// Get toy side from orientation vector.
 ToySide rotationCorrection(int vector[3])
 {
   ToySide ret;
@@ -50,11 +51,13 @@ ToySide rotationCorrection(int vector[3])
   return ret;
 }
 
+// Set the multiplexer base on toy orientation.
 void setSwitch(ToySide side)
 {
   uint8_t muxValue = mux.getCurrentPin();
 
   mux.off();
+  // arduino compiler doesn't support maps =( and I'm too lazy to add a library that supports it.
   switch (side)
   {
   case ToySide::PurpleOne:
