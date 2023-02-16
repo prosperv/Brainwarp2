@@ -107,12 +107,15 @@ public:
 
     int isOnSide(const double sideToCheck, const double axis1, const double axis2)
     {
-        const double G_THRESHOLD = 0.60;
+        // const double G_THRESHOLD = 0.60;
+        const double G_DIFFERENCE_THRESHOLD = 0.3;
 
         // We know we're on a side if one axis has a high values while the other 2 axis are near zero.
         // Ex. x: 0.01, y: -0.01, z: 1.1
         // if (myABS(sideToCheck) > G_THRESHOLD && myABS(axis1) < ZERO_TRESHOLD && myABS(axis2) < ZERO_TRESHOLD)
-        if (myABS(sideToCheck) > G_THRESHOLD)
+        // if (myABS(sideToCheck) > G_THRESHOLD)
+        if (myABS(sideToCheck) > myABS(axis1) + G_DIFFERENCE_THRESHOLD
+            && myABS(sideToCheck) > myABS(axis2) + G_DIFFERENCE_THRESHOLD)
         {
             return sideToCheck > 0 ? (1) : -1;
         }
@@ -137,7 +140,7 @@ public:
     bool staticAnalysis(int vector[3], const double accelValue[3], const double gryoValue[3])
     {
         // Checking to see if the top is spinning too much.
-        const double GRYO_STATIC_THRESHOLD = 150;
+        const double GRYO_STATIC_THRESHOLD = 200;
         const auto gyroFastMagnitude = myABS(gryoValue[0]) + myABS(gryoValue[1]) + myABS(gryoValue[2]);
         if (gyroFastMagnitude > GRYO_STATIC_THRESHOLD)
         {
@@ -148,7 +151,7 @@ public:
 
         // Even if the toy is not spinning, too much translational movement can lower our confidence in
         // determining orientation.
-        const double MAG_UPPER_LIMIT = 1.3;
+        const double MAG_UPPER_LIMIT = 1.4;
         const double MAG_LOWER_LIMIT = 0.6;
         if (accelMagnitude < MAG_LOWER_LIMIT && accelMagnitude > MAG_UPPER_LIMIT)
         {
