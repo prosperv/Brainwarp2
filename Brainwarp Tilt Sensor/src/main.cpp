@@ -42,9 +42,9 @@ ToySide rotationCorrection(int vector[3])
   else if (vector[0] == 0 && vector[1] == -1 && vector[2] == 0)
     ret = ToySide::RedTwo;
   else if (vector[0] == 0 && vector[1] == 0 && vector[2] == 1)
-    ret = ToySide::GreenThree;
-  else if (vector[0] == 0 && vector[1] == 0 && vector[2] == -1)
     ret = ToySide::WhiteFour;
+  else if (vector[0] == 0 && vector[1] == 0 && vector[2] == -1)
+    ret = ToySide::GreenThree;
   else
     ret = ToySide::None;
 
