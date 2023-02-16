@@ -35,6 +35,21 @@ static void vector_cross(To *out, const Ta *a, const Tb *b)
     out[2] = (a[0] * b[1]) - (a[1] * b[0]);
 };
 
+template <typename T>
+static bool vector_equality(const T *left, const T *right)
+{
+    return left[0] == right[0] && left[1] == right[1] && left[2] == right[2];
+};
+
+template <typename T>
+static void vector_set(T *left, const T *right)
+{
+    left[0] = right[0];
+    left[1] = right[1];
+    left[2] = right[2];
+};
+
+// Add vector and get unit vector.
 static void vector_int_add(int out[], const int a[], const int b[])
 {
     out[0] = a[0] + b[0];
@@ -50,10 +65,11 @@ static void vector_int_add(int out[], const int a[], const int b[])
 };
 
 template <typename T>
-bool vector_equality(const T *left, const T *right)
+static T vector_abs_sum(const T x[])
 {
-    return left[0] == right[0] && left[1] == right[1] && left[2] == right[2];
+    return myABS(x[0]) + myABS(x[1]) + myABS(x[2]);
 };
+
 
 class Fusion
 {
