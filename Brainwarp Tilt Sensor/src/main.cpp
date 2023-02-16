@@ -8,8 +8,9 @@
 #define SENSOR_UPDATE_RATE_HZ 100
 const unsigned long DELAY_US = (SENSOR_UPDATE_RATE_HZ * 100);
 
+
 #ifdef _AVR_IOM328P_H_
-#include <RA4051.h>
+#include "RA4051.h"
 #define ENABLE_PIN 7
 RA4051 mux(6, 5, 4);
 #elif ARDUINO_attiny3217
@@ -61,22 +62,22 @@ void setSwitch(ToySide side)
   switch (side)
   {
   case ToySide::PurpleOne:
-    muxValue = 3; //3
+      muxValue = 3;
     break;
   case ToySide::RedTwo:
-    muxValue = 5; //5
+      muxValue = 5;
     break;
   case ToySide::GreenThree:
-    muxValue = 1; //1
+      muxValue = 1; 
     break;
   case ToySide::WhiteFour:
-    muxValue = 7; //7
+      muxValue = 7;
     break;
   case ToySide::OrangeFive:
-    muxValue = 6; //6
+      muxValue = 6;
     break;
   case ToySide::YellowSix:
-    muxValue = 4; //4
+      muxValue = 4;
     break;
   case ToySide::None:
     muxValue = -1;
