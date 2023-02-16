@@ -93,7 +93,7 @@ public:
         _gyro.enableDefault();
 
         // DR = 01 (200 Hz ODR); BW = 11 (70 Hz bandwidth); PD = 1 (normal mode); Zen = Yen = Xen = 1 (all axes enabled)
-        _gyro.writeReg(L3G::CTRL_REG1, 0b01101111);
+        _gyro.writeReg(L3G::CTRL_REG1, 0b01111111);
         // FS = 11 (2000dps)
         _gyro.writeReg(L3G::CTRL_REG4, 0b00110000);
     };
@@ -171,7 +171,7 @@ public:
     we can get the new orientation. However over time the integration value will become 
     inaccurate. Also it cannot determine orientation on its own thus the use of the accelerometer. 
     */
-    bool dynamicAnalysis(int vector[3], const int lastVector[3], const unsigned long usTimeDelta, const double gryoValue[])
+    bool dynamicAnalysis(int newVector[3], const int lastVector[3], const unsigned long usTimeDelta, const double gryoValue[])
     {
         bool ret = false;
         double gryoValueCopy[] = {gryoValue[0],
@@ -179,8 +179,9 @@ public:
                                   gryoValue[2]};
 
         // Need to know the current toy orientation else we exit.
-        // if (vector_dot(lastVector, lastVector) == 0)
-        //     return;
+        if (vector_dot(lastVector, lastVector) == 0)
+            return;
+
 
         // Zero out gyro value that is parallel to gravity as that doesn't really
         // affect the orientation that we care about.
@@ -198,27 +199,29 @@ public:
         _accumulatedDegree[2] += gryoValueCopy[2] * timeDelta;
 
         // Check if toy has rotated enough.
+        int rotationVector[3] = {0, 0, 0};
         const double DEGREE_THRESHOLD = 60;
         if (myABS(_accumulatedDegree[0]) > DEGREE_THRESHOLD)
         {
             int value = _accumulatedDegree[0] > 0 ? 1 : -1;
-            int xUnitVector[3] = {value, 0, 0};
-            vector_cross(vector, lastVector, xUnitVector);
+            rotationVector[0] = value;
             ret = true;
         }
         else if (myABS(_accumulatedDegree[1]) > DEGREE_THRESHOLD)
         {
             int value = _accumulatedDegree[1] > 0 ? 1 : -1;
-            int yUnitVector[3] = {0, value, 0};
-            vector_cross(vector, lastVector, yUnitVector);
+            rotationVector[1] = value;
             ret = true;
         }
         else if (myABS(_accumulatedDegree[2]) > DEGREE_THRESHOLD)
         {
             int value = _accumulatedDegree[2] > 0 ? 1 : -1;
-            int zUnitVector[3] = {0, 0, value};
-            vector_cross(vector, lastVector, zUnitVector);
+            rotationVector[2] = value;
             ret = true;
+        }
+        if (ret)
+        { 
+            vector_cross(newVector, lastVector, rotationVector);
         }
         return ret;
     };
@@ -242,39 +245,54 @@ public:
         double scaledGyro[3];
         auto currentReadTime = micros();
         auto readTimeDelta = currentReadTime - _lastReadTime;
+        _lastReadTime = currentReadTime;
 
         _accel.get_Gxyz(scaledAccel);
         _gyro.read();
         computeScaledGyro(scaledGyro, _gyro.g);
 
-        /// Static: Toy is not moving and is stable
         int staticVector[3] = {0, 0, 0};
         bool staticStatus = staticAnalysis(staticVector, scaledAccel, scaledGyro);
-
-        if (staticStatus && vector_dot(staticVector, staticVector) == 1)
-        {
-            // We have a high confidence orientation. Reset the gryo orientation tracking.
-            resetAccumulatedDegree();
-        };
 
         int dynamicVector[3] = {0, 0, 0};
         bool dynamicStatus = dynamicAnalysis(dynamicVector, _lastValidOrientation, readTimeDelta, scaledGyro);
 
-        // Dynamic analysis looks good!
-        if (dynamicStatus)
+        /// Static if true: Toy is not moving and is stable
+        /// Dynamic if true: We rotated enough
+        if (staticStatus || dynamicStatus)
         {
             resetAccumulatedDegree();
-            _currentOrientation[0] = dynamicVector[0];
-            _currentOrientation[1] = dynamicVector[1];
-            _currentOrientation[2] = dynamicVector[2];
+            vector_int_add(_currentOrientation, staticVector, dynamicVector);
         }
 
-        _lastReadTime = currentReadTime;
+
+        // Save last valid orientation
+        if (vector_abs_sum(_currentOrientation) == 1
+            && !vector_equality(_lastValidOrientation, _currentOrientation))
+        {
+            // Check if the orientation somehow flipped
+            if (
+                myABS(_currentOrientation[0] - _lastValidOrientation[0]) > 1
+                || myABS(_currentOrientation[1] - _lastValidOrientation[1]) > 1
+                || myABS(_currentOrientation[2] - _lastValidOrientation[2]) > 1
+            )
+            {
+                vector_set(_currentOrientation, _lastValidOrientation);
+            }
+            else
+            {  
+                vector_set(_lastValidOrientation, _currentOrientation);
+            }
+        }
+
 
 #ifdef DEBUG
-        auto totalProcessTime = micros() - currentReadTime;
+        // Process Time : 0.9ms
+        // auto totalProcessTime = micros() - currentReadTime;
+        // PRINT("Process Time: ");
+        // PRINT(totalProcessTime); PRINT(" uSec");
+        // PRINTLN();
 #endif
-
         return _currentOrientation;
     }
 
